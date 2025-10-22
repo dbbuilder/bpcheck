@@ -1,0 +1,247 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { User } from '../types';
+import { STORAGE_KEYS } from '../constants';
+
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  refreshToken: string | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+}
+
+interface AuthContextType extends AuthState {
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshAccessToken: () => Promise<void>;
+  updateUser: (user: User) => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    token: null,
+    refreshToken: null,
+    isLoading: true,
+    isAuthenticated: false,
+  });
+
+  // Load stored auth data on mount
+  useEffect(() => {
+    loadStoredAuthData();
+  }, []);
+
+  const loadStoredAuthData = async () => {
+    try {
+      const [storedToken, storedRefreshToken, storedUser] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN),
+        AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
+        AsyncStorage.getItem(STORAGE_KEYS.USER_DATA),
+      ]);
+
+      if (storedToken && storedUser) {
+        const user = JSON.parse(storedUser) as User;
+        setAuthState({
+          user,
+          token: storedToken,
+          refreshToken: storedRefreshToken,
+          isLoading: false,
+          isAuthenticated: true,
+        });
+      } else {
+        setAuthState((prev) => ({ ...prev, isLoading: false }));
+      }
+    } catch (error) {
+      console.error('Failed to load auth data:', error);
+      setAuthState((prev) => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      setAuthState((prev) => ({ ...prev, isLoading: true }));
+
+      // TODO: Replace with actual API call
+      // const response = await apiService.login(email, password);
+
+      // Temporary mock response
+      const mockResponse = {
+        user: {
+          userId: '123e4567-e89b-12d3-a456-426614174000',
+          email,
+          firstName: 'John',
+          lastName: 'Doe',
+          storageQuotaMB: 500,
+          currentStorageUsedMB: 0,
+          isActive: true,
+          createdDate: new Date().toISOString(),
+          modifiedDate: new Date().toISOString(),
+        },
+        token: 'mock_jwt_token',
+        refreshToken: 'mock_refresh_token',
+      };
+
+      // Store auth data
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, mockResponse.token),
+        AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, mockResponse.refreshToken),
+        AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(mockResponse.user)),
+      ]);
+
+      setAuthState({
+        user: mockResponse.user,
+        token: mockResponse.token,
+        refreshToken: mockResponse.refreshToken,
+        isLoading: false,
+        isAuthenticated: true,
+      });
+    } catch (error) {
+      setAuthState((prev) => ({ ...prev, isLoading: false }));
+      throw error;
+    }
+  };
+
+  const register = async (
+    email: string,
+    password: string,
+    firstName?: string,
+    lastName?: string
+  ) => {
+    try {
+      setAuthState((prev) => ({ ...prev, isLoading: true }));
+
+      // TODO: Replace with actual API call
+      // const response = await apiService.register({ email, password, firstName, lastName });
+
+      // Temporary mock response
+      const mockResponse = {
+        user: {
+          userId: '123e4567-e89b-12d3-a456-426614174000',
+          email,
+          firstName: firstName || '',
+          lastName: lastName || '',
+          storageQuotaMB: 500,
+          currentStorageUsedMB: 0,
+          isActive: true,
+          createdDate: new Date().toISOString(),
+          modifiedDate: new Date().toISOString(),
+        },
+        token: 'mock_jwt_token',
+        refreshToken: 'mock_refresh_token',
+      };
+
+      // Store auth data
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, mockResponse.token),
+        AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, mockResponse.refreshToken),
+        AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(mockResponse.user)),
+      ]);
+
+      setAuthState({
+        user: mockResponse.user,
+        token: mockResponse.token,
+        refreshToken: mockResponse.refreshToken,
+        isLoading: false,
+        isAuthenticated: true,
+      });
+    } catch (error) {
+      setAuthState((prev) => ({ ...prev, isLoading: false }));
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      // TODO: Call API to invalidate refresh token
+      // await apiService.logout();
+
+      // Clear stored auth data
+      await Promise.all([
+        AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN),
+        AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
+        AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA),
+      ]);
+
+      setAuthState({
+        user: null,
+        token: null,
+        refreshToken: null,
+        isLoading: false,
+        isAuthenticated: false,
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+      throw error;
+    }
+  };
+
+  const refreshAccessToken = async () => {
+    try {
+      if (!authState.refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      // TODO: Replace with actual API call
+      // const response = await apiService.refreshToken(authState.refreshToken);
+
+      // Temporary mock response
+      const mockResponse = {
+        token: 'new_mock_jwt_token',
+        refreshToken: 'new_mock_refresh_token',
+      };
+
+      // Update stored tokens
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, mockResponse.token),
+        AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, mockResponse.refreshToken),
+      ]);
+
+      setAuthState((prev) => ({
+        ...prev,
+        token: mockResponse.token,
+        refreshToken: mockResponse.refreshToken,
+      }));
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      // If refresh fails, log the user out
+      await logout();
+      throw error;
+    }
+  };
+
+  const updateUser = (user: User) => {
+    setAuthState((prev) => ({ ...prev, user }));
+    AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        ...authState,
+        login,
+        register,
+        logout,
+        refreshAccessToken,
+        updateUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
